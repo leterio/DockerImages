@@ -1,0 +1,103 @@
+#!/usr/bin/env -S bash
+#===============================================================================
+#          FILE: build
+#
+#         USAGE: build [opts] <project>
+#
+#   DESCRIPTION: Docker image builder
+#
+#       OPTIONS: ---
+#  REQUIREMENTS: ---
+#          BUGS: ---
+#         NOTES: ---
+#        AUTHOR: Vinícius Letério (viniciusleterio@gmail.com)
+#  ORGANIZATION:
+#       CREATED: 01/04/2021
+#      REVISION: 2.0
+#===============================================================================
+
+set -o nounset
+
+### log: Log any message to output
+# Arguments:
+#   message) to log
+# Return: Formatted message on output
+log() {
+    local message="${1:-""}"
+    [[ $message ]] && echo "${0##*/}: $message"
+}
+
+### usage: Help
+# Arguments:
+#   none)
+# Return: Help text
+usage() {
+    local RC="${1:-0}"
+    echo "Usage: ${0##*/} [opts] <project>
+    -h          This help
+    -u \"<username>\"
+                Set the docker user
+    -L          Tag this build as \"latest\"
+    -T          Tag this build with current date (as \"dd\\MM\\yyyy\")
+    -t \"<customtag1>[,customtag2,...]\"
+                Add custom tags in addition to the predefined ones
+                NOTE: Tags are separated by ','
+    -P \"<platform1>[,platform2,...]
+                Define target platforms
+                NOTE: Platforms are separated by ','
+                Default: \"linux/amd64,linux/386,linux/arm64,
+                           linux/arm/v7,linux/arm/v6\"
+    -p          Push image to Docker Hub
+                NOTE: Require tags to be pushed
+" >&2
+    exit $RC
+}
+
+### Script variables
+project=
+username="viniciusleterio"
+tags=
+push=
+platform="linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6"
+
+while getopts ":h:u:LTt:LP:p" opt; do
+  case "$opt" in
+    h) usage 0 ;;
+    u) username="$OPTARG" ;;
+    L) tags+="${tags:+,}latest" ;;
+    T) tags+="${tags:+,}$(date +%d%m%Y)" ;;
+    t) tags+="${tags:+,}$OPTARG" ;;
+    P) platform="${OPTARG}" ;;
+    p) push="true" ;;
+    "?") log "Unknown option: -$OPTARG"; usage 1 ;;
+    ":") log "No argument value for option: -$OPTARG"; usage 2 ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# Project directory sanity check
+if [[ $# == 0 ]]; then
+    log "Missing project directory."
+    exit 11
+elif [[ $# -gt 1 ]]; then
+    log "Only the project directory must be passed after the arguments"
+    exit 12
+elif [[ ! -d "$1" ]]; then
+    log "Project \"$1\" not found"
+    exit 13
+else
+    project="$1"
+fi
+
+[[ ! "$platform" ]] && {
+    log "Empty platform list"
+    exit 14
+}
+
+[[ "$push" == "true" ]] && [[ ! "$tags" ]] && push=
+
+docker buildx build \
+    --platform "$platform" \
+    ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
+    ${push:+--push} \
+    ${project}
