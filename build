@@ -48,6 +48,7 @@ usage() {
                 Default: \"linux/amd64,linux/386,linux/arm64,
                            linux/arm/v7,linux/arm/v6\"
     -p          Push image to Docker Hub
+    -l          Load image to Docker
                 NOTE: Require tags to be pushed
 " >&2
     exit $RC
@@ -58,9 +59,10 @@ project=
 username="viniciusleterio"
 tags=
 push=
+load=
 platform="linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6"
 
-while getopts ":h:u:LTt:LP:p" opt; do
+while getopts ":h:u:LTt:LP:pl" opt; do
   case "$opt" in
     h) usage 0 ;;
     u) username="$OPTARG" ;;
@@ -69,6 +71,7 @@ while getopts ":h:u:LTt:LP:p" opt; do
     t) tags+="${tags:+,}$OPTARG" ;;
     P) platform="${OPTARG}" ;;
     p) push="true" ;;
+    l) load="true" ;;
     "?") log "Unknown option: -$OPTARG"; usage 1 ;;
     ":") log "No argument value for option: -$OPTARG"; usage 2 ;;
   esac
@@ -78,20 +81,20 @@ shift $((OPTIND - 1))
 # Project directory sanity check
 if [[ $# == 0 ]]; then
     log "Missing project directory."
-    exit 11
+    usage 11
 elif [[ $# -gt 1 ]]; then
     log "Only the project directory must be passed after the arguments"
-    exit 12
+    usage 12
 elif [[ ! -d "$1" ]]; then
     log "Project \"$1\" not found"
-    exit 13
+    usage 13
 else
     project="$1"
 fi
 
 [[ ! "$platform" ]] && {
     log "Empty platform list"
-    exit 14
+    usage 14
 }
 
 [[ "$push" == "true" ]] && [[ ! "$tags" ]] && push=
@@ -100,4 +103,5 @@ docker buildx build \
     --platform "$platform" \
     ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
     ${push:+--push} \
+    ${load:+--load} \
     ${project}
