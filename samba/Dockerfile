@@ -12,8 +12,11 @@ RUN apk --no-cache --no-progress upgrade && \
 
 # Define Samba config file
 RUN file=/etc/samba/smb.conf && \
-    echo "[global]"                              > $file  && \
+    echo "[global]"                              >  $file && \
     echo "    log file = /dev/stdout"            >> $file && \
+    echo "    smb encrypt = auto"                >> $file && \
+    echo "    security = user"                   >> $file && \
+    echo "    encrypt passwords = yes"           >> $file && \
     echo "    client ipc max protocol = SMB3"    >> $file && \
     echo "    client ipc min protocol = SMB2_10" >> $file && \
     echo "    client max protocol = SMB3"        >> $file && \

@@ -154,9 +154,9 @@ share() {
     echo "    delete veto files = yes" >> $file
     echo "" >> $file
     [[ -d $path ]] || {
-        log "Creating share \"$share\" directory"
+        log "Creating share \"$sharename\" directory"
         mkdir -p $path > /dev/null
-        killonfail "Share \"$share\" directory not created" $?
+        killonfail "Share \"$sharename\" directory not created" $?
     }
 }
 
@@ -215,48 +215,50 @@ usage() {
 
     echo "Usage: ${0##*/} [-opt] [command]
 Options (fields in '[]' are optional, '<>' are required):
-    -h          This help
-    -u \"<username;password>[;UID;usergroupname;GID]\"
-                Add a user
-                required arg: \"<username>;<passwd>\"
-                <username> for user
-                <password> for user
-                [UID] for user
-                [usergroupname] for user
-                [GID] for user group
-    -g \"<groupname[;GID;userlist]\"
-                Add a group and include users
-                required arg: \"<groupname>\"
-                <groupname> for group
-                [GID] for group
-                NOTE: for user list below, usernames are separated by ','
-                [userlist] to insert on group
-    -s \"<sharename;/path>[;browseable;readonly;createmask;directorymask;forcegroup;guest;users;comment]\"
-                Configure a share
-                required arg: \"<sharename>;</path>\"
-                <sharename> is how it's called for clients
-                <path> path to share
-                NOTE: for the default value, just leave blank
-                [browseable] default:'yes' or 'no'
-                [readonly] default:'yes' or 'no'
-                [createmask] default:unset - IE: 0660
-                [directorymask] default:unset - IE: 0770
-                [forcegroup] default:unset or 'group to force'
-                [guest] allowed default:'no' or 'yes'
-                NOTE: for user lists below, usernames are separated by ','
-                [users] allowed default:unset or list of allowed users
-                [comment] default: unset or description of share
-    -O \"<section;parameter>\"
-                Provide a option for smb.conf
-                required arg: \"<section>\" - IE: \"share\"
-                required arg: \"<parameter>\" - IE: \"log level = 2\"
-    -w \"<workgroup>\"
-                Configure the workgroup (domain) samba should use
-                required arg: \"<workgroup>\" for samba
-    -S \"<serverstring>\"
-                Set the global 'server string'
-                required arg: \"<serverstring>\" for samba
-    -n          Start the 'nmbd' daemon to advertise the shares
+ENV           OPTION  DESCRIPTION
+              -h      This help
+USER[0-9]*    -u \"<username;password>[;UID;usergroupname;GID]\"
+                      Add a user
+                      required arg: \"<username>;<passwd>\"
+                      <username> for user
+                      <password> for user
+                      [UID] for user
+                      [usergroupname] for user
+                      [GID] for user group
+GROUP[0-9]*   -g \"<groupname[;GID;userlist]\"
+                      Add a group and include users
+                      required arg: \"<groupname>\"
+                      <groupname> for group
+                      [GID] for group
+                      NOTE: for user list below, usernames are separated by ','
+                      [userlist] to insert on group
+SHARE[0-9]*   -s \"<sharename;/path>[;browseable;readonly;createmask;directorymask;forcegroup;guest;users;comment]\"
+                      Configure a share
+                      required arg: \"<sharename>;</path>\"
+                      <sharename> is how it's called for clients
+                      <path> path to share
+                      NOTE: for the default value, just leave blank
+                      [browseable] default:'yes' or 'no'
+                      [readonly] default:'yes' or 'no'
+                      [createmask] default:unset - IE: 0660
+                      [directorymask] default:unset - IE: 0770
+                      [forcegroup] default:unset or 'group to force'
+                      [guest] allowed default:'no' or 'yes'
+                      NOTE: for user lists below, usernames are separated by ','
+                      [users] allowed default:unset or list of allowed users
+                      [comment] default: unset or description of share
+OPTION[0-9]*  -O \"<section;parameter>\"
+                      Provide a option for smb.conf
+                      required arg: \"<section>\" - IE: \"share\"
+                      required arg: \"<parameter>\" - IE: \"log level = 2\"
+WORKGROUP     -w \"<workgroup>\"
+                      Configure the workgroup (domain) samba should use
+                      required arg: \"<workgroup>\" for samba
+SERVERSTRING  -S \"<serverstring>\"
+                      Set the global 'server string'
+                      required arg: \"<serverstring>\" for samba
+NMBD          -n      Start the 'nmbd' daemon to advertise the shares
+
 The 'command' (if provided and valid) will be run instead of samba" >&2
     exit $RC
 }
