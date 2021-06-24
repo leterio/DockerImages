@@ -50,6 +50,7 @@ usage() {
     -p          Push image to Docker Hub
     -l          Load image to Docker
                 NOTE: Require tags to be pushed
+    -d          Print Docker command instead of call Docker
 " >&2
     exit $RC
 }
@@ -61,8 +62,9 @@ tags=
 push=
 load=
 platform="linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6"
+test=
 
-while getopts ":h:u:LTt:LP:pl" opt; do
+while getopts ":h:u:LTt:LP:pld" opt; do
   case "$opt" in
     h) usage 0 ;;
     u) username="$OPTARG" ;;
@@ -72,6 +74,7 @@ while getopts ":h:u:LTt:LP:pl" opt; do
     P) platform="${OPTARG}" ;;
     p) push="true" ;;
     l) load="true" ;;
+    d) test="true" ;;
     "?") log "Unknown option: -$OPTARG"; usage 1 ;;
     ":") log "No argument value for option: -$OPTARG"; usage 2 ;;
   esac
@@ -99,9 +102,18 @@ fi
 
 [[ "$push" == "true" ]] && [[ ! "$tags" ]] && push=
 
+if [[ "$test" == "true" ]]; then
+echo docker buildx build \
+    --platform "$platform" \
+    ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
+    ${push:+--push} \
+    ${load:+--load} \
+    ${project}
+else
 docker buildx build \
     --platform "$platform" \
     ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
     ${push:+--push} \
     ${load:+--load} \
     ${project}
+fi
