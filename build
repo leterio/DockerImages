@@ -16,7 +16,7 @@
 #      REVISION: 2.0
 #===============================================================================
 
-set -o nounset
+#set -o nounset
 
 ### log: Log any message to output
 # Arguments:
@@ -47,6 +47,8 @@ usage() {
                 NOTE: Platforms are separated by ','
                 Default: \"linux/amd64,linux/386,linux/arm64,
                            linux/arm/v7,linux/arm/v6\"
+    -a \"<arg1=val1>[,arg2=val2,...]\"
+                Arguments to pass via --build-arg
     -p          Push image to Docker Hub
     -l          Load image to Docker
                 NOTE: Require tags to be pushed
@@ -62,16 +64,18 @@ tags=
 push=
 load=
 platform="linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6"
+arguments=
 test=
 
-while getopts ":h:u:LTt:LP:pld" opt; do
+while getopts ":h:u:LTt:LP:a:pld" opt; do
   case "$opt" in
     h) usage 0 ;;
     u) username="$OPTARG" ;;
     L) tags+="${tags:+,}latest" ;;
-    T) tags+="${tags:+,}$(date +%d%m%Y)" ;;
+    T) tags+="${tags:+,}$(date +%Y%m%d)" ;;
     t) tags+="${tags:+,}$OPTARG" ;;
     P) platform="${OPTARG}" ;;
+    a) arguments+="${arguments:+,}$OPTARG" ;;
     p) push="true" ;;
     l) load="true" ;;
     d) test="true" ;;
@@ -102,18 +106,16 @@ fi
 
 [[ "$push" == "true" ]] && [[ ! "$tags" ]] && push=
 
+export COMMAND="docker buildx build \
+    --platform $platform \
+    ${tags:+$(sed "s/^/--tag ${username}\/${project}:/g;s/\,/ --tag ${username}\/${project}:/g" <<< $tags)} \
+    ${arguments:+$(sed "s/^/--build-arg /g;s/\,/ --build-arg /g" <<< $arguments)} \
+    ${push:+--push} \
+    ${load:+--load} \
+    ${project}"
+#s/,/ /g; s/\</--tag ${username}\/${project}:/g
 if [[ "$test" == "true" ]]; then
-echo docker buildx build \
-    --platform "$platform" \
-    ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
-    ${push:+--push} \
-    ${load:+--load} \
-    ${project}
+    echo "$(sed -E 's/[[:space:]]+/ /g;s/--/\n\t--/g;s/(.*)[[:space:]]/\1\n\t/g' <<< $COMMAND)"
 else
-docker buildx build \
-    --platform "$platform" \
-    ${tags:+$(sed "s/,/ /g; s/\</--tag ${username}\/${project}:/g" <<< $tags)} \
-    ${push:+--push} \
-    ${load:+--load} \
-    ${project}
+    $COMMAND
 fi
