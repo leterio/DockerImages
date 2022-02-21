@@ -16,7 +16,6 @@ RUN file=/etc/minidlna.conf && \
 AlbumArtSmall.jpg/albumartsmall.jpg/AlbumArt.jpg/\
 albumart.jpg/Album.jpg/album.jpg/Folder.jpg/folder.jpg/\
 Thumb.jpg/thumb.jpg"                    >> $file && \
-    echo ""                             >> $file && \
     rm -rf /tmp/*
 
 COPY minidlna.sh /usr/bin/

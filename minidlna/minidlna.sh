@@ -62,7 +62,7 @@ setuseruid() {
         usermod \
             --non-unique \
             --uid "$uid" \
-            "$username"
+            "$username" 2>&1 > /dev/null
     } || {
         log "User \"$username\" not found"
     }
@@ -76,7 +76,7 @@ setusergid() {
         groupmod \
             --non-unique \
             --gid "$gid" \
-            "$groupname"
+            "$groupname" 2>&1 > /dev/null
     } || {
         log "Group \"$groupname\" not found"
     }
@@ -225,5 +225,5 @@ if ps -ef | egrep -v grep | grep -q minidlnad; then
 else
     log "Launching $APP_NAME"
     chown -R "minidlna:minidlna" /minidlna
-    exec su-exec minidlna /usr/sbin/minidlnad -P "$APP_PID" -S "$@"
+    exec su-exec minidlna /usr/sbin/minidlnad -P "$APP_PID" -S
 fi

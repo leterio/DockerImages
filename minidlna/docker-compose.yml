@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  minidlna:
+    image: "viniciusleterio/minidlna:latest"
+    volumes:
+      # Storing minidlna cache outside the container
+      - /mnt/data/services/minidlna/cache:/minidlna/cache:rw
+
+      # Media volumes
+      - /my/media/path1:/data/media1:ro
+      - /my/media/path2:/data/media2:ro
+    environment:
+      MINIDLNA_UID: "1111"
+      MINIDLNA_GID: "2222"
+
+      # Groups to join
+      GROUP1: "mygroup_1;4321"
+      GROUP2: "mygroup_2;1234"
+
+      # Scans all media inside the "/data" directory
+      MINIDLNA_MEDIA_DIR: "/data"
+
+      # Enable rescan on file changes/created
+      MINIDLNA_INOTIFY: "yes"
+
+      # Custom options to MiniDLNA
+      # See http://manpages.ubuntu.com/manpages/bionic/man5/minidlna.conf.5.html
+
+      # Interval between scans
+      OPTION1: "notify_interval=300"
+
+      OPTION2: "friendly_name=name that clients sees"
+      OPTION3: "model_name=Model name"
+      OPTION4: "model_number=model number"
+      OPTION5: "serial=serial of the device"
+    # Required for uPNP
+    network_mode: "host"
+    restart: unless-stopped
