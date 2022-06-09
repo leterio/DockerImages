@@ -38,7 +38,7 @@ usage() {
     -u \"<username>\"
                 Set the docker user
     -L          Tag this build as \"latest\"
-    -T          Tag this build with current date (as \"dd\\MM\\yyyy\")
+    -T          Tag this build with current date (as \"yyyy-MM-dd\")
     -t \"<customtag1>[,customtag2,...]\"
                 Add custom tags in addition to the predefined ones
                 NOTE: Tags are separated by ','
@@ -72,7 +72,7 @@ while getopts ":h:u:LTt:LP:a:pld" opt; do
     h) usage 0 ;;
     u) username="$OPTARG" ;;
     L) tags+="${tags:+,}latest" ;;
-    T) tags+="${tags:+,}$(date +%Y%m%d)" ;;
+    T) tags+="${tags:+,}$(date +%Y-%m-%d)" ;;
     t) tags+="${tags:+,}$OPTARG" ;;
     P) platform="${OPTARG}" ;;
     a) arguments+="${arguments:+,}$OPTARG" ;;
