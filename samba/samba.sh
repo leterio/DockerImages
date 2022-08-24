@@ -312,5 +312,5 @@ else
         ionice -c 3 nmbd -D
     }
     log "Launching SMBD"
-    exec ionice -c 3 smbd -FS --no-process-group </dev/null
+    exec ionice -c 3 smbd -F --no-process-group </dev/null
 fi
