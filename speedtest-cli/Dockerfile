@@ -1,4 +1,4 @@
-FROM python:rc-alpine
+FROM python:alpine
 
 LABEL maintainer="Vinícius Letério <viniciusleterio@gmail.com>"
 
