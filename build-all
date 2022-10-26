@@ -1,0 +1,23 @@
+#!/bin/bash
+
+./build -Lp wsdd
+./build -Lp speedtest-cli
+./build -Lp -P linux/amd64,linux/arm64,linux/arm/v7 -t jammy -a UBUNTU_IMAGE_VERSION=jammy ubuntu-build-essential
+
+LATEST_MINIDLNA=$(docker run --rm alpine /bin/sh -c "apk update 2>&1 >/dev/null; apk search -x minidlna 2>/dev/null | sed 's#minidlna\-##g'")
+if [[ "$LATEST_MINIDLNA" != "" ]]; then
+    ./build -Lp -t "${LATEST_MINIDLNA}" minidlna
+else
+    ./build -Lp minidlna
+fi
+unset LATEST_MINIDLNA
+
+LATEST_SAMBA=$(docker run --rm alpine /bin/sh -c "apk update 2>&1 >/dev/null; apk search -x samba 2>/dev/null | sed 's#samba\-##g'")
+if [[ "$LATEST_SAMBA" != "" ]]; then
+    ./build -Lp -t "${LATEST_SAMBA}" samba
+else
+    ./build -Lp samba
+fi
+unset LATEST_SAMBA
+
+./build -Lp -P linux/amd64,linux/arm64 minecraft-server
