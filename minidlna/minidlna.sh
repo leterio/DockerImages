@@ -68,6 +68,11 @@ setuseruid() {
     }
 }
 
+### setuseruid: set user GID
+# Arguments:
+#   username) to change gid
+#   gid) to set
+# Return: GID changed for user if exists
 setusergid() {
     local groupname="$1" \
           gid="$2"
