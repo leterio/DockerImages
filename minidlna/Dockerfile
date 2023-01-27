@@ -25,6 +25,6 @@ VOLUME [ "/data" ]
 HEALTHCHECK \
     --interval=60s \
     --timeout=15s \
-        CMD curl --silent --fail localhost:8200 || exit 1
+        CMD curl --silent --fail 127.0.0.1:8200 || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/minidlna.sh"]
