@@ -228,6 +228,9 @@ done < <(env | awk '/^MINIDLNA_MEDIA_DIR[0-9=_]/ {sub (/^[^=]*=/, "", $0); print
 if ps -ef | egrep -v grep | grep -q minidlnad; then
     log "Service already running, please restart container to apply changes"
 else
+    log "Updating image ..."
+    apk upgrade
+
     log "Launching $APP_NAME"
     chown -R "minidlna:minidlna" /minidlna
     exec su-exec minidlna /usr/sbin/minidlnad -P "$APP_PID" -S
