@@ -68,7 +68,7 @@ platform="linux/amd64,linux/arm64,linux/arm/v7"
 arguments=
 test=
 
-while getopts ":h:u:LTt:LP:a:pld" opt; do
+while getopts ":h:u:LTt:P:a:pld" opt; do
   case "$opt" in
     h) usage 0 ;;
     u) username="$OPTARG" ;;
@@ -107,16 +107,17 @@ fi
 
 [[ "$push" == "true" ]] && [[ ! "$tags" ]] && push=
 
-export COMMAND="docker buildx build \
-    --platform $platform \
-    ${tags:+$(sed "s/^/--tag ${username}\/${project}:/g;s/\,/ --tag ${username}\/${project}:/g" <<< $tags)} \
-    ${arguments:+$(sed "s/^/--build-arg /g;s/\,/ --build-arg /g" <<< $arguments)} \
-    ${push:+--push} \
-    ${load:+--load} \
-    ${project}"
+export COMMAND="docker.exe buildx build \
+--platform $platform \
+${tags:+$(sed "s/^/--tag ${username}\/${project}:/g;s/\,/ --tag ${username}\/${project}:/g" <<< $tags)} \
+${arguments:+$(sed "s/^/--build-arg /g;s/\,/ --build-arg /g" <<< $arguments)} \
+${push:+--push} \
+${load:+--load} \
+${project}"
 #s/,/ /g; s/\</--tag ${username}\/${project}:/g
 if [[ "$test" == "true" ]]; then
-    echo "$(sed -E 's/[[:space:]]+/ /g;s/--/\n\t--/g;s/(.*)[[:space:]]/\1\n\t/g' <<< $COMMAND)"
+    #echo "$(sed -E 's/[[:space:]]+/ /g;s/--/\n\t--/g;s/(.*)[[:space:]]/\1\n\t/g' <<< $COMMAND)"
+    echo "$COMMAND"
 else
     $COMMAND
 fi
