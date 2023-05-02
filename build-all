@@ -13,4 +13,6 @@ else
 fi
 unset LATEST_SAMBA
 
+./build -Lp -P linux/amd64,linux/arm64 minecraft-server
+
 ./build -p -t "15.0.0" -a ANGULAR_VER=@^15.0.0 angular-devcontainer
