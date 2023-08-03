@@ -1,14 +1,15 @@
-ARG ALPINE_VERSION=latest
+FROM alpine:latest
 
-FROM alpine:$ALPINE_VERSION
+ARG ALPINE_PACKAGE=samba
+ARG ALPINE_PACKAGE_VER=
 
 LABEL maintainer="Vinícius Letério <viniciusleterio@gmail.com>"
 
 # Install samba
 RUN apk --no-cache --no-progress upgrade && \
-    apk --no-cache --no-progress add bash samba shadow tini tzdata && \
+    apk --no-cache --no-progress add bash shadow tini tzdata ${ALPINE_PACKAGE}${ALPINE_PACKAGE_VER:+=${ALPINE_PACKAGE_VER}} && \
     mkdir /shares && \
-    rm -rf /tmp/*
+    rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 # Define Samba config file
 RUN file=/etc/samba/smb.conf && \
@@ -30,7 +31,7 @@ RUN file=/etc/samba/smb.conf && \
     echo "    follow symlinks = yes"             >> $file && \
     echo ""                                      >> $file
 
-COPY samba.sh /usr/bin/
+COPY --chown=root:root --chmod=0755 root/samba.sh /
 
 EXPOSE \
     137/udp \
@@ -41,8 +42,8 @@ EXPOSE \
 HEALTHCHECK \
     --interval=60s \
     --timeout=15s \
-        CMD smbclient -L \\localhost -U % -m SMB3
+    CMD smbclient -L \\localhost -U % -m SMB3
 
 VOLUME [ "/shares" ]
 
-ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/samba.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "/samba.sh"]

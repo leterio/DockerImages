@@ -1,20 +1,8 @@
 #!/usr/bin/env bash
-#===============================================================================
-#          FILE: entrypoint.sh
-#
-#         USAGE: ./entrypoint.sh
-#
-#   DESCRIPTION: Entrypoint for angular-devcontainer docker container
-#
-#       OPTIONS: ---
-#  REQUIREMENTS: ---
-#          BUGS: ---
-#         NOTES: ---
-#        AUTHOR: Vinícius Letério (viniciusleterio@gmail.com)
-#  ORGANIZATION:
-#       CREATED: 24/11/2022 (dd/MM/yyyy)
-#      REVISION: 1.0
-#===============================================================================
+
+# Author:    Vinícius Letério <viniciusleterio@gmail.com>
+# Objective: Retrives the latest version for a node package
+# Version:   1.0
 
 set -o nounset
 

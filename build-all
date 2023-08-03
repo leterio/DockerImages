@@ -1,18 +1,47 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-./build -Lp wsdd
-./build -Lp speedtest-cli
-./build -Lp -t jammy -a UBUNTU_IMAGE_VERSION=jammy ubuntu-build-essential
-./build -Lp minidlna
+# Author: Vinícius Letério <viniciusleterio@gmail.com>
+# Objective: Invoke build-image for every image on this repository
+# Version:   3.0
 
-LATEST_SAMBA=$(docker run --rm alpine /bin/sh -c "apk update 2>&1 >/dev/null; apk search -x samba 2>/dev/null | sed 's#samba\-##g'")
-if [[ "$LATEST_SAMBA" != "" ]]; then
-    ./build -Lp -t "${LATEST_SAMBA}" samba
-else
-    ./build -Lp samba
-fi
-unset LATEST_SAMBA
+C_TRACE='\033[36m'
+C_SUCCESS='\033[32m'
+C_WARN='\033[33m'
+C_ERROR='\033[31m'
+C_CLEAR='\033[0m'
+function log-trace() { [[ "$VERBOSE" == "1" ]] && echo -e "${0##/}: ${C_TRACE}$@${C_CLEAR}" || true; }
+function log-info() { echo -e "${0##/}: $@"; }
+function log-success() { echo -e "${0##/}: ${C_SUCCESS}$@${C_CLEAR}"; }
+function log-warn() { echo -e "${0##/}: ${C_WARN}$@${C_CLEAR}"; }
+function log-error() { echo -e "${0##/}: ${C_ERROR}$@${C_CLEAR}"; }
 
-./build -Lp -P linux/amd64,linux/arm64 minecraft-server
+# Per project script to set environmento variables for build-image
+function tryLoadBuildEnvSH() {
+    local buildEnvSH="build-env.sh"
+    local project="$1"
 
-./build -p -t "15.0.0" -a ANGULAR_VER=@^15.0.0 angular-devcontainer
+    if [[ -x "$buildEnvSH" ]]; then
+        log-info "$buildEnvSH for project found. Invoking ..."
+        . "$buildEnvSH"
+
+        if [[ $? -ne 0 ]]; then
+            log-error "$buildEnvSH failed. Skipping this project!"
+            return 1
+        fi
+    fi
+}
+
+# Build a single image
+function buildImageSingle() {
+    local project="$1"
+    cd "$project"
+    log-info "Building project: $project"
+    tryLoadBuildEnvSH "$project" || return 1
+    ../build-image -Lp .
+}
+
+[[ -x .env ]] && source .env
+
+for project in $(find . -maxdepth 2 -type f -iname dockerfile | sed 's#\.\/\(.*\)\/dockerfile#\1#gI'); do
+    (buildImageSingle "$project") && log-success "Successfull build for project $project" || log-error "Build failed for project $project"
+done

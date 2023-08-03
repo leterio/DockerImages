@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+
+# Author: Vinícius Letério <viniciusleterio@gmail.com>
+# Objective: Wrapper for building docker images (Using buildx);
+# Version:   3.0
+
+# Logging functions
+C_TRACE='\033[36m'
+C_SUCCESS='\033[32m'
+C_WARN='\033[33m'
+C_ERROR='\033[31m'
+C_CLEAR='\033[0m'
+function log-trace() { [[ "$VERBOSE" == "1" ]] && echo -e "${0##/}: ${C_TRACE}$@${C_CLEAR}" || true; }
+function log-info() { echo -e "${0##/}: $@"; }
+function log-success() { echo -e "${0##/}: ${C_SUCCESS}$@${C_CLEAR}"; }
+function log-warn() { echo -e "${0##/}: ${C_WARN}$@${C_CLEAR}"; }
+function log-error() { echo -e "${0##/}: ${C_ERROR}$@${C_CLEAR}"; }
+
+DEFAULT_PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
+VERBOSE="${VERBOSE:-0}"
+
+# Usage info
+function usage() {
+    local RC="${1:-0}"
+    log-info ""
+    log-info "Docker BuildX Wrapper"
+    log-info ""
+    log-info "Usage: ${0##*/} [opts] <project>"
+    log-info ""
+    log-info "| ARGUMENT                             | ENV                | DESC"
+    log-info "|----------------------------------------------------------------------------------------------------------------------"
+    log-info "| -h                                   |                    | This help."
+    log-info "| -d                                   | BUILD_TEST_MODE    | Don't execute docker build at end. Useful with VERBOSE."
+    log-info "| -u '<username>'                      | BUILD_USERNAME     | Set the docker username for pushing images."
+    log-info "| -a '<arg1=val1>[,arg2=val2,...]'     | BUILD_ARGUMENTS    | Arguments to pass via --build-arg."
+    log-info "| -t '<customtag1>[,customtag2,...]'   | TAG_CUSTOMS        | Add custom tags in addition to the predefined ones."
+    log-info "|                                      |                    |   NOTE: Tags are separated by ','."
+    log-info "| -L                                   | TAG_LATEST         | Tag this build as 'latest'."
+    log-info "| -T                                   | TAG_CURR_DATE      | Tag this build with current date (as 'yyyy-MM-dd')."
+    log-info "| -P '<platform1>[,platform2,...]'     | TARGET_PLATFORMS   | Define target platforms."
+    log-info "|                                      |                    |   NOTE: Platforms are separated by ','."
+    log-info "|                                      |                    |   Default: '${DEFAULT_PLATFORMS}'."
+    log-info "| -p                                   | IMAGE_PUSH         | Push image to Docker Hub."
+    log-info "|                                      |                    |   NOTE: Require at least one tag to be pushed."
+    log-info "| -l                                   | IMAGE_LOAD         | Load image to Docker."
+    log-info "|                                      | VERBOSE            | Enables verbose mode."
+    log-info ""
+    log-info "NOTES:"
+    log-info "  Boolean envs must be set to "1" to be valid."
+    log-info "  Multivalued arguments will be merged with environment variables."
+    log-warn "  Project must be informed as last argument."
+    log-info ""
+    log-trace "Exiting with status code: $RC"
+    exit $RC
+}
+
+# Handle environment variables
+function handleEnvironmentVariables() {
+    log-trace "Initializing local variables based on environment variables ..."
+
+    [[ "$BUILD_TEST_MODE" == "1" ]] && test="true"
+    log-trace "test=${test}"
+    [[ "$BUILD_USERNAME" ]] && username="$BUILD_USERNAME"
+    log-trace "username=${username}"
+    [[ "$BUILD_ARGUMENTS" ]] && arguments="$BUILD_ARGUMENTS"
+    log-trace "arguments=${arguments}"
+
+    [[ "$TAG_CUSTOMS" ]] && tags+="${tags:+,}$TAG_CUSTOMS"
+    log-trace "tags=${tags}"
+    [[ "$TAG_LATEST" == "1" ]] && tags+="${tags:+,}latest"
+    log-trace "tags=${tags}"
+    [[ "$TAG_CURR_DATE" == "1" ]] && tags+="${tags:+,}$(date +%Y-%m-%d)"
+    log-trace "tags=${tags}"
+
+    [[ "$TARGET_PLATFORMS" ]] && platforms="$TARGET_PLATFORMS"
+    log-trace "platforms=${platforms}"
+
+    [[ "$IMAGE_PUSH" == "1" ]] && push="true"
+    log-trace "push=${push}"
+    [[ "$IMAGE_LOAD" == "1" ]] && load="true"
+    log-trace "load=${load}"
+}
+
+# Handle command line arguments
+# The return code contains the index of last processed argument
+function handleArguments() {
+    log-trace "Handling command arguments ($# args) ..."
+    while getopts ":hdu:a:t:LTP:pl" OPTION; do
+        log-trace "Handling argument: $OPTION"
+        case "$OPTION" in
+        h)
+            usage 0
+            ;;
+        d)
+            test="true"
+            log-trace "test=${test}"
+            ;;
+        u)
+            username="$OPTARG"
+            log-trace "username=${username}"
+            ;;
+        a)
+            arguments+="${arguments:+,}$OPTARG"
+            log-trace "arguments=${arguments}"
+            ;;
+        t)
+            tags+="${tags:+,}$OPTARG"
+            log-trace "tags=${tags}"
+            ;;
+        L)
+            tags+="${tags:+,}latest"
+            log-trace "tags=${tags}"
+            ;;
+        T)
+            tags+="${tags:+,}$(date +%Y-%m-%d)"
+            log-trace "tags=${tags}"
+            ;;
+        P)
+            platforms+="${platforms:+,}${OPTARG}"
+            log-trace "platforms=${platforms}"
+            ;;
+        p)
+            push="true"
+            log-trace "push=${push}"
+            ;;
+        l)
+            load="true"
+            log-trace "load=${load}"
+            ;;
+        "?")
+            log-error "Unknown option: -$OPTARG"
+            usage 1
+            ;;
+        ":")
+            log-error "No argument value for option: -$OPTARG"
+            usage 2
+            ;;
+        esac
+    done
+    return $((OPTIND - 1))
+}
+
+# Extract projetc directory from arguments and validate it
+function projectResolveAndSanityCheck() {
+    # Project directory sanity check
+    log-trace "Running project argument sanity check ..."
+    if [[ $# == 0 ]]; then
+        log-error "Missing project directory!"
+        usage 11
+    elif [[ $# -gt 1 ]]; then
+        log-error "This build script only supports build one project at a time!"
+        usage 12
+    elif [[ ! -d "$1" ]]; then
+        log-error "Project '$1' not found!"
+        usage 13
+    else
+        project="$1"
+        log-trace "project=$project"
+        if [[ "$project" == "." ]]; then
+            projectAlias="${PWD##*/}"
+        else
+            projectAlias="$project"
+        fi
+        log-trace "projectAlias=$projectAlias"
+    fi
+
+}
+
+# Deduplicate comma separated lists
+function deduplicateList() {
+    local list=$1
+    tr ',' '\n' <<<"$list" | awk '!seen[$0]++' | tr '\n' ',' | sed 's/,$//'
+}
+
+# Deduplicate all list variables
+function deduplicateListVariables() {
+    arguments=$(deduplicateList "$arguments")
+    log-trace "Deduplicated arguments=$arguments"
+
+    tags=$(deduplicateList "$tags")
+    log-trace "Deduplicated tags=$tags"
+
+    platforms=$(deduplicateList "$platforms")
+    log-trace "Deduplicated platforms=$platforms"
+}
+
+# Validates final state of variables
+function variablesSanityCheck() {
+    if [[ ! "$platforms" ]]; then
+        platforms="$DEFAULT_PLATFORMS"
+        log-trace "Platform list is empty. Using default. platforms=$platforms"
+    fi
+
+    if [[ "$push" == "true" ]] && [[ ! "$tags" ]]; then
+        log-warn "Push flag is set to true but there is no tag defined. Disabling push!"
+        push=
+    fi
+}
+
+# Calls the docker buildx build
+function runDockerBuild() {
+    local command="docker buildx build \
+        --platform $platforms \
+        ${tags:+$(sed "s/^/--tag ${username:+$username\/}${projectAlias}:/g;s/\,/ --tag ${username:+$username\/}${projectAlias}:/g" <<<$tags)} \
+        ${arguments:+$(sed "s/^/--build-arg /g;s/\,/ --build-arg /g" <<<$arguments)} \
+        ${push:+--push} \
+        ${load:+--load} \
+        ${project}"
+
+    log-info "Executing the command:\n\t$(sed 's#\ -#\n\t\t-#g;s/\(.*\)\ /\1\n\t\t/' <<<"$command")"
+    if [[ "$test" != "true" ]]; then
+        $command
+        if [[ $? -eq 0 ]]; then
+            log-success "Build successful!"
+            exit 0
+        else
+            log-error "Build failed!"
+            exit 1
+        fi
+    fi
+}
+
+### Script variables
+project=
+projectName=
+test=
+username=
+arguments=
+tags=
+platforms=
+push=
+load=
+
+[[ -x .env ]] && source .env
+
+handleEnvironmentVariables
+handleArguments "$@"
+shift $?
+projectResolveAndSanityCheck "$@"
+deduplicateListVariables
+variablesSanityCheck
+
+log-trace "project=$project"
+log-trace "test=$test"
+log-trace "username=$username"
+log-trace "arguments=$arguments"
+log-trace "tags=$tags"
+log-trace "platforms=$platforms"
+log-trace "push=$push"
+log-trace "load=$load"
+
+runDockerBuild
