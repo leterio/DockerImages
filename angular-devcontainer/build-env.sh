@@ -37,3 +37,6 @@ log-trace "TAG_CUSTOMS=$TAG_CUSTOMS"
 
 export BUILD_ARGUMENTS="NODE_PACKAGE_VER=${latestVersionFound}"
 log-trace "BUILD_ARGUMENTS=$BUILD_ARGUMENTS"
+
+export TARGET_PLATFORMS="linux/amd64,linux/arm64"
+log-trace "TARGET_PLATFORMS=$TARGET_PLATFORMS"
