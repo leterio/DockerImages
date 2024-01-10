@@ -4,20 +4,14 @@
 # Objective: Wrapper for building docker images (Using buildx);
 # Version:   3.0
 
-# Logging functions
-C_TRACE='\033[36m'
-C_SUCCESS='\033[32m'
-C_WARN='\033[33m'
-C_ERROR='\033[31m'
-C_CLEAR='\033[0m'
-function log-trace() { [[ "$VERBOSE" == "1" ]] && echo -e "${0##/}: ${C_TRACE}$@${C_CLEAR}" || true; }
-function log-info() { echo -e "${0##/}: $@"; }
-function log-success() { echo -e "${0##/}: ${C_SUCCESS}$@${C_CLEAR}"; }
-function log-warn() { echo -e "${0##/}: ${C_WARN}$@${C_CLEAR}"; }
-function log-error() { echo -e "${0##/}: ${C_ERROR}$@${C_CLEAR}"; }
+command -v log-trace 2>/dev/null >/dev/null || function log-trace() { [[ ${LOG_TRACE:-0} -eq 1 ]] && echo -e "${0##/}: \033[36m$@\033[0m" || true; }
+command -v log-info 2>/dev/null >/dev/null || function log-info() { echo -e "${0##/}: $@"; }
+command -v log-success 2>/dev/null >/dev/null || function log-success() { echo -e "${0##/}: \033[32m$@\033[0m"; }
+command -v log-warn 2>/dev/null >/dev/null || function log-warn() { echo -e "${0##/}: \033[33m$@\033[0m"; }
+command -v log-error 2>/dev/null >/dev/null || function log-error() { echo -e "${0##/}: \033[31m$@\033[0m"; }
 
 DEFAULT_PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
-VERBOSE="${VERBOSE:-0}"
+LOG_TRACE="${LOG_TRACE:-0}"
 
 # Usage info
 function usage() {
@@ -30,7 +24,7 @@ function usage() {
     log-info "| ARGUMENT                             | ENV                | DESC"
     log-info "|----------------------------------------------------------------------------------------------------------------------"
     log-info "| -h                                   |                    | This help."
-    log-info "| -d                                   | BUILD_TEST_MODE    | Don't execute docker build at end. Useful with VERBOSE."
+    log-info "| -d                                   | BUILD_TEST_MODE    | Don't execute docker build at end. Useful with LOG_TRACE."
     log-info "| -u '<username>'                      | BUILD_USERNAME     | Set the docker username for pushing images."
     log-info "| -a '<arg1=val1>[,arg2=val2,...]'     | BUILD_ARGUMENTS    | Arguments to pass via --build-arg."
     log-info "| -t '<customtag1>[,customtag2,...]'   | TAG_CUSTOMS        | Add custom tags in addition to the predefined ones."
@@ -43,7 +37,7 @@ function usage() {
     log-info "| -p                                   | IMAGE_PUSH         | Push image to Docker Hub."
     log-info "|                                      |                    |   NOTE: Require at least one tag to be pushed."
     log-info "| -l                                   | IMAGE_LOAD         | Load image to Docker."
-    log-info "|                                      | VERBOSE            | Enables verbose mode."
+    log-info "|                                      | LOG_TRACE          | Enables verbose mode."
     log-info ""
     log-info "NOTES:"
     log-info "  Boolean envs must be set to "1" to be valid."

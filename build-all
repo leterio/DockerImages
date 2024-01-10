@@ -4,16 +4,11 @@
 # Objective: Invoke build-image for every image on this repository
 # Version:   3.0
 
-C_TRACE='\033[36m'
-C_SUCCESS='\033[32m'
-C_WARN='\033[33m'
-C_ERROR='\033[31m'
-C_CLEAR='\033[0m'
-function log-trace() { [[ "$VERBOSE" == "1" ]] && echo -e "${0##/}: ${C_TRACE}$@${C_CLEAR}" || true; }
-function log-info() { echo -e "${0##/}: $@"; }
-function log-success() { echo -e "${0##/}: ${C_SUCCESS}$@${C_CLEAR}"; }
-function log-warn() { echo -e "${0##/}: ${C_WARN}$@${C_CLEAR}"; }
-function log-error() { echo -e "${0##/}: ${C_ERROR}$@${C_CLEAR}"; }
+command -v log-trace 2>/dev/null >/dev/null || function log-trace() { [[ ${LOG_TRACE:-0} -eq 1 ]] && echo -e "${0##/}: \033[36m$@\033[0m" || true; }
+command -v log-info 2>/dev/null >/dev/null || function log-info() { echo -e "${0##/}: $@"; }
+command -v log-success 2>/dev/null >/dev/null || function log-success() { echo -e "${0##/}: \033[32m$@\033[0m"; }
+command -v log-warn 2>/dev/null >/dev/null || function log-warn() { echo -e "${0##/}: \033[33m$@\033[0m"; }
+command -v log-error 2>/dev/null >/dev/null || function log-error() { echo -e "${0##/}: \033[31m$@\033[0m"; }
 
 # Per project script to set environmento variables for build-image
 function tryLoadBuildEnvSH() {
